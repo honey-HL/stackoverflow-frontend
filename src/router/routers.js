@@ -1,10 +1,10 @@
-import HomeIndex from '../page/homeIndex'
-import Home from '@/page/home/home'
-import Jobs from '../page/jobs/jobs'
-import Questions from '../page/questions/questions'
-import Tags from '../page/Tags/tags'
-import Users from '../page/Users/users'
-import Search from '../page/search/search'
+const HomeIndex = () => import('../page/homeIndex')
+const Home = () => import('@/page/home/home')
+const Jobs = () => import('../page/jobs/jobs')
+const Questions = () => import('../page/questions/questions')
+const Tags = () => import('../page/Tags/tags')
+const Users = () => import('../page/Users/users')
+const Search = () => import('../page/search/search')
 
 // const childBanner = [
 //   {
