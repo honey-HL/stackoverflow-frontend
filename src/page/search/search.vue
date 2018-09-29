@@ -94,8 +94,6 @@ export default {
 </script>
 <style scoped>
 
-/*******************/
-
 /**************************/
 .relevance:hover, .newest:hover, .more-a:hover{
     color: #3b4045;
