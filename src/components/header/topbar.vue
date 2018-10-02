@@ -10,7 +10,7 @@
         </div>
         <form action="/search" method="get" class="search" autocomplete="off">
             <div class="input-search">
-                <input v-model="searchCode" id='search' type="text" @blur="hideSubmit()" @focus="showSubmit()" placeholder="Search…" maxlength="240">
+                <input v-model="searchCode" id='search' type="text" @input="watchInput" @blur="hideSubmit()" @focus="focus()" placeholder="Search…" maxlength="240">
                 <button @click="goSearch()" id="submit" type="button">
                     <svg style="color: #fff;" aria-hidden="true" class="iconSearch" width="18" height="18" viewBox="0 0 18 18">
                         <path fill="#fff" d="M12.86 11.32L18 16.5 16.5 18l-5.18-5.14v-.35a7 7 0 1 1 1.19-1.19h.35zM7 12A5 5 0 1 0 7 2a5 5 0 0 0 0 10z"></path>
@@ -66,26 +66,52 @@
 </template>
 <script>
 import * as publicModule from '../../core/js/publicMethod'
+import bus from '../../core/js/bus.js'
 export default {
     name: 'topbar',
     data () {
         return {
             isFocus: false,
-            searchCode: ''
+            searchCode: '',
+            key: ''
         }
     },
+    watch: {
+        '$route': function(to, from) {
+            console.log(to)
+            //     this.searchCode = ''
+        }
+    },
+    mounted () {
+    },
+     beforeDestroy () {
+    },
+    created() {
+        let that = this
+        bus.$on('clear-search', function() {
+            that.clearSearch()
+        });
+        bus.$on('message-topbar', function(key) {
+            that.messageTopbar(key)
+        });
+    },
     methods: {
+        watchInput (value) {
+            console.log(value)
+        },
+        messageTopbar (key) {
+            this.searchCode = key
+        },
+        clearSearch () {
+            this.searchCode = ''
+        },
         goSearch () {
-            let search = document.getElementById('search');
-            console.log(document.getElementById('search'))
-            console.log(search.value);
+            console.log(this.searchCode);
+            bus.$emit('message-search', this.searchCode);
             publicModule.goArouter(this, '/search'+ '?q=' + this.searchCode);
-            // this.$router.push({ path: '/search?q=' + search.value});
-            console.log(this.$route.query);
-
         },
         changeColor (e) {
-            console.log(e)
+            // console.log(e)
             //   console.log(e.path.style.fill)
             // e.path.style.fill = 'red';
         },
@@ -94,7 +120,8 @@ export default {
             document.querySelector('.input-search').style.border = '1px solid #ccc'
             document.querySelector('.input-search').style.boxShadow = ''
         },
-        showSubmit () {
+        focus () {
+            console.log(this.searchCode)
             document.querySelector('#submit').style.opacity = '1'
             document.querySelector('.input-search').style.border = '1px solid #1997fc'
             document.querySelector('.input-search').style.boxShadow = 'inset 0 2px 2px #fafafb, 0 0 5px rgba(0,199,204,0.4);';

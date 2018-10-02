@@ -54,7 +54,7 @@
 </template>
 <script>
 import Vue from 'vue'
-import homeBanner from '../components/homeBanner/homeBanner'
+import homeBanner from '../components/header/homeBanner'
 export default {
     name: 'homeIndex',
     components:{

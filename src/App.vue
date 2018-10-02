@@ -9,9 +9,9 @@
 </template>
 
 <script>
-import topBar from './components/topbar/topbar'
+import topBar from './components/header/topbar'
 import stackFooter from './components/footer/footer'
-import suspension from './components/suspension/suspension'
+import suspension from './components/footer/suspension'
 export default {
   name: 'app',
   components: {

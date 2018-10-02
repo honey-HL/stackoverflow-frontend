@@ -1,8 +1,8 @@
 <template>
-    <div class="search-container">
+    <div ref="searchContainer" class="search-container">
         <div class="mb24 search-box">
-            <div v-if="!hasValue" id="headline">Search</div>
-            <div v-else id="headline">Search Results</div>
+            <div v-if="has_q" id="headline">Search Results</div>
+            <div v-else id="headline">Search</div>
             <div class="ask-questions">
                 <div class="advanced">
                     <a href="#" class="js-advanced-tips-toggle">Advanced Search Tips</a>
@@ -12,39 +12,23 @@
                 </div>
             </div>
         </div>
-        <div v-if="hasValue == true" class="displaying-results">
+        <div v-if="has_q" class="displaying-results">
             <span class="mr2">results found containing</span>
-            <span class="displaying-results-highlight">{{keyWords}}</span>
+            <span class="displaying-results-highlight">{{words}}</span>
         </div>
         <div class="bigsearch-inner">
-            <input v-model="q" name="q" class="s-input" type="text" maxlength="140" size="80">
-            <button @click="getResults()" class="search-btn">search</button>
+            <input v-model="keyWords" name="q" class="s-input" type="text" maxlength="140" size="80">
+            <button @click="getResults(keyWords, 'current')" class="search-btn">search</button>
         </div>
-        <div class="results-filter">
-            <div class="results-number">500 results</div>
-            <div class="tabs-filter">
-                <a @click="filter(true)" :class="{selected: isSelected}" class="relevance filter-btn" title="" data-value="relevance">relevance</a>
-                <a @click="filter(false)" :class="{selected: !isSelected}" class="newest filter-btn" title="" data-value="newest">newest</a>
-                <nav @click="showdropdown" class="more-nav filter-btn">
-                    <a class="more-a">more</a>
-                    <ul v-if="isDropdownShow" class="more-ul-dropdown">
-                        <li>
-                            <a class="disabled" href="" title="Recently active search results" data-value="active">active</a>
-                        </li>
-                        <li>
-                            <a class="disabled" href="" title="Highest voted search results" data-value="votes">votes</a>
-                        </li>
-                    </ul>
-                </nav>
-            </div>
-        </div>
+       
         <!---rearch-results-->
-        <q-results ref="refResults" :q="q"></q-results>
+        <q-results v-if="has_q" v-on:filter-by="filterBy" ref="Results" :q="keyWords" :results="resultsObj" :has_results="hasResults"></q-results>
 
     </div>
 </template>
 <script>
-import qResults from '../../components/qResults/qResults'
+import qResults from '../../components/common/qResults'
+import bus from '../../core/js/bus.js'
 export default {
     name: 'search',
     components:{
@@ -52,176 +36,97 @@ export default {
     },
     watch: {
         '$route': function (to, from) {
-            console.log(to, from)
-            this.getSearchValue ()
         }
     },
     data () {
         return {
             hasValue: false,
             keyWords: '',
-            q: '',
-            isSelected: true,
-            isDropdownShow: false
+            prefix: 'http://api.stackexchange.com/2.2/',
+            has_q: false,
+            hasResults: false,
+            words: '',
+            resultsObj: {}
         }
     },
     mounted () {
-        this.getSearchValue()
+        console.log(this.$route.query.q)
+        this.getResults(this.$route.query.q)
+    },
+    destroyed () {
+        bus.$emit('clear-search');
+    },
+    created () {
+        let that = this
+        bus.$on('message-search', function(key) {
+            console.log(key)
+            that.getResults(key, 'topbar');
+        });
     },
     methods: {
-        getResults () {
-            console.log(this.q)
-            this.$refs.refResults.searchResults(this.q)
+        filterBy (value) {
+            console.log(value)
+            this.getRsList(this.keyWords, value);
         },
-        showdropdown () {
-            this.isDropdownShow = !this.isDropdownShow;
-        },
-        filter (flag) {
-            this.isSelected = flag;
-        },
-        getSearchValue () {
-            console.log('welcome to search')
-            if (this.$route.query.q === '') {
-                this.hasValue = false;
+        getResults (key, from) {
+            console.log(key, from)
+            this.keyWords = key;
+            this.words = key;
+            if (key !== '') {
+                this.has_q = true;
+                if (from === 'current') {
+                    this.$router.push({ path: '/search?q=' + key})
+                    bus.$emit('message-topbar', key);
+                }
+                this.getRsList(key, 'relevance');
             } else {
-                this.hasValue = true;
+                this.has_q = false;
+                bus.$emit('clear-search');
+                this.$router.push({ path: '/search?q='})
             }
-            this.keyWords = this.$route.query.q;
-            this.q = this.keyWords;
+        },
+        getRsList (key, sortVal) {
+            let that = this;
+            axios.get(this.prefix + 'search/advanced', {
+                params: {
+                    page: 1,
+                    pagesize: 10,
+                    q: key,
+                    filter: '!9Z(-wwYGT',
+                    order: 'desc',
+                    sort: sortVal,
+                    site: 'stackoverflow'
+                }
+            })
+            .then(function (res) {
+                that.resultsObj = res.data;
+                console.log(res.data.items.length)
+                if (res.data.items.length > 0) {
+                    that.hasResults = true;
+                } else {
+                    that.hasResults = false;
+                }
+            })
+            .catch(function (error) {
+                console.log(error);
+            })
+        },
+        getSearchValue (to, from) {
+            // console.log('welcome to search')
+            // if (this.$route.query.q !== '') {
+            //     this.keyWords = this.$route.query.q;
+            //     this.hasValue = true;
+            // } else {
+            //     this.hasValue = false;
+            // }
+            // console.log(this.keyWords)
         }
     }
 }
 </script>
 <style scoped>
 /**/
-/**************************/
-.relevance:hover, .newest:hover, .more-a:hover{
-    color: #3b4045;
-}
-.more-ul-dropdown:before {
-    position: absolute;
-    z-index: 101;
-    content: "";
-    width: 0;
-    height: 0;
-    top: -10px;
-    right: 4px;
-    border-left: 8px solid transparent;
-    border-right: 8px solid transparent;
-    border-bottom: 10px solid #eaeaea;
-}
-.more-ul-dropdown:after {
-    position: absolute;
-    z-index: 101;
-    content: "";
-    width: 0;
-    height: 0;
-    top: -9px;
-    right: 5px;
-    border-left: 7px solid transparent;
-    border-right: 7px solid transparent;
-    border-bottom: 9px solid #fff;
-}
-.more-ul-dropdown li a {
-    box-sizing: border-box;
-    width: 100%;
-    padding: 10px 10px 10px 10px;
-    display: inline-block;
-    color: #07C;
-    text-decoration: none;
-    cursor: pointer;
-}
-.more-ul-dropdown li {
-    text-align: left;
-    white-space: nowrap;
-    position: relative;
-    border-bottom: 1px solid #eff0f1;
-    line-height: 12px;
-    display: block;
-    background-color: #FFF;
-    height: auto;
-    margin-bottom: 0;
-    transition: all .2s ease;
-}
-.more-ul-dropdown {
-    position: absolute !important;
-    top: 43px;
-    z-index: 100;
-    box-shadow: 0 2px 5px rgba(12,13,14,0.3);
-    border-radius: 2px;
-    background-color: #FFF;
-    margin: 0;
-}
-.more-a:after {
-    content: "";
-    position: absolute;
-    z-index: 30;
-    top: calc(50% - 2px);
-    right: 1em;
-    width: 0;
-    height: 0;
-    border-left: 4px solid transparent;
-    border-right: 4px solid transparent;
-    border-top: 4px solid #6a737c;
-    pointer-events: none;
-}
-.selected {
-    color: #3b4045 !important;
-    background-color: rgba(174,192,209,0.25);
-    border-color: #76808a;
-    z-index: 25;
-    box-shadow: 0 0 0 0 rgba(145,153,161,0);
-}
-.more-a {
-    cursor: pointer;
-}
-.more-nav:hover {
-    background-color: rgba(174,192,209,0.25);
-}
-.relevance {
-    border-top-left-radius: 3px;
-    border-bottom-left-radius: 3px;
-}
-.filter-btn {
-    position: relative;
-    padding: 0 8px;
-    box-shadow: 0 0 0 0 rgba(145,153,161,0);
-    color: #6a737c;
-    position: relative;
-    padding: 0.7em 0.92em;
-    outline: none;
-    font-family: inherit;
-    font-size: 0.8rem;
-    font-weight: 400;
-    line-height: 1.15384615;
-    text-decoration: none;
-    cursor: pointer;
-    border: 1px solid #adb3b9;
-}
-.more-nav {
-    border-top-right-radius: 3px;
-    border-bottom-right-radius: 3px;
-    padding-right: 2em;
-    cursor: pointer;
-}
-.newest, .more-nav {
-    border-left: none;
-}
-.tabs-filter {
-    text-transform: capitalize !important;
-    display: flex;
-}
-.results-number {
-    flex-grow: 1;
-    flex-shrink: 1;
-    flex-basis: auto;
-    font-size: 1.06rem;
-}
-.results-filter {
-    display: flex;
-    margin-bottom: 16px;
-    align-items: center;
-}
+
 /******************/
 .displaying-results-highlight {
     font-weight: bold;
